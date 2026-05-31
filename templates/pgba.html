@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>GBA CREDOMATIC | Página Principal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Bootstrap e iconos -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- CSS correcto para Flask -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css') }}">
+</head>
+<body>
+
+<header class="public-navbar">
+    <div class="public-brand">
+        <div class="public-logo">GBA</div>
+        <div>
+            <strong>GBA CREDOMATIC</strong>
+            <span>Soluciones financieras modernas</span>
+        </div>
+    </div>
+
+    <nav class="public-menu">
+        <a href="#inicio" class="public-link active">Inicio</a>
+        <a href="#servicios" class="public-link">Servicios</a>
+        <a href="#beneficios" class="public-link">Beneficios</a>
+        <a href="#app" class="public-link">Banca Digital</a>
+        <a href="#nosotros" class="public-link">Nosotros</a>
+        <a href="#contacto" class="public-link">Contacto</a>
+    </nav>
+
+    <a href="{{ url_for('login', nueva_sesion=1) }}" class="btn btn-primary public-login-btn">
+       <i class="bi bi-person-circle"></i>
+        Iniciar sesión
+    </a>
+    
+</header>
+
+<main>
+
+    <!-- HERO -->
+    <section id="inicio" class="public-hero">
+        <div class="public-hero-content">
+            <span class="public-tag">Banco digital y financiero</span>
+
+            <h1>
+                Banco para hoy,<br>
+                pensado en <span>tu futuro.</span>
+            </h1>
+
+            <p>
+                En <strong>BANCO GBA CREDOMATIC</strong> te acompañamos con soluciones financieras
+                seguras, ágiles e innovadoras. Ahorra, invierte, recibe créditos y realiza
+                tus operaciones desde donde estés con nuestra banca digital.
+            </p>
+
+            <div class="public-actions">
+                <button type="button" class="btn btn-primary btn-public-action" data-scroll-target="#servicios">
+                    <i class="bi bi-plus-circle"></i>
+                    Abrir cuenta
+                </button>
+
+                <button type="button" class="btn btn-outline-light btn-public-action" data-scroll-target="#contacto">
+                    <i class="bi bi-chat-dots"></i>
+                    Solicitar información
+                </button>
+            </div>
+        </div>
+
+        <div class="public-hero-card">
+            <div class="bank-building-card">
+                <div class="bank-card-header">
+                    <div class="mini-logo">GBA</div>
+                    <span>GBA CREDOMATIC</span>
+                </div>
+
+                <div class="bank-building-visual">
+                    <i class="bi bi-bank2"></i>
+                </div>
+
+                <div class="bank-card-info">
+                    <strong>Banca segura</strong>
+                    <span>Atención, tecnología y respaldo financiero en un solo lugar.</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICIOS -->
+    <section id="servicios" class="public-section">
+        <div class="public-section-title">
+            <span>Nuestros servicios</span>
+            <h2>Soluciones financieras para cada etapa de tu vida</h2>
+            <p>
+                Productos diseñados para personas, familias y empresas que buscan seguridad,
+                facilidad y crecimiento financiero.
+            </p>
+        </div>
+
+        <div class="public-services-grid">
+            <article class="public-service-card">
+                <div class="service-icon">
+                    <i class="bi bi-piggy-bank"></i>
+                </div>
+                <h3>Cuentas de Ahorro</h3>
+                <p>Ahorra de forma segura y haz crecer tu dinero con opciones flexibles.</p>
+                <button type="button" class="service-btn">
+                    Conocer más <i class="bi bi-arrow-right"></i>
+                </button>
+            </article>
+
+            <article class="public-service-card">
+                <div class="service-icon">
+                    <i class="bi bi-credit-card-2-front"></i>
+                </div>
+                <h3>Tarjetas de Crédito</h3>
+                <p>Beneficios exclusivos, aceptación amplia y control desde tu banca digital.</p>
+                <button type="button" class="service-btn">
+                    Conocer más <i class="bi bi-arrow-right"></i>
+                </button>
+            </article>
+
+            <article class="public-service-card">
+                <div class="service-icon">
+                    <i class="bi bi-cash-coin"></i>
+                </div>
+                <h3>Préstamos Personales</h3>
+                <p>Créditos rápidos para proyectos, estudios, vivienda o necesidades personales.</p>
+                <button type="button" class="service-btn">
+                    Conocer más <i class="bi bi-arrow-right"></i>
+                </button>
+            </article>
+
+            <article class="public-service-card">
+                <div class="service-icon">
+                    <i class="bi bi-laptop"></i>
+                </div>
+                <h3>Banca en Línea</h3>
+                <p>Realiza pagos, transferencias y consultas desde cualquier lugar.</p>
+                <button type="button" class="service-btn">
+                    Conocer más <i class="bi bi-arrow-right"></i>
+                </button>
+            </article>
+
+            <article class="public-service-card">
+                <div class="service-icon">
+                    <i class="bi bi-arrow-left-right"></i>
+                </div>
+                <h3>Transferencias</h3>
+                <p>Envía y recibe dinero de forma rápida, segura y disponible todos los días.</p>
+                <button type="button" class="service-btn">
+                    Conocer más <i class="bi bi-arrow-right"></i>
+                </button>
+            </article>
+
+            <article class="public-service-card">
+                <div class="service-icon">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <h3>Inversiones</h3>
+                <p>Opciones para hacer crecer tu patrimonio con acompañamiento financiero.</p>
+                <button type="button" class="service-btn">
+                    Conocer más <i class="bi bi-arrow-right"></i>
+                </button>
+            </article>
+        </div>
+    </section>
+
+    <!-- BENEFICIOS -->
+    <section id="beneficios" class="public-benefits">
+        <div class="benefit-item">
+            <div>
+                <i class="bi bi-shield-check"></i>
+            </div>
+            <h4>Seguridad</h4>
+            <p>Protegemos tu información y tus operaciones con altos estándares de seguridad.</p>
+        </div>
+
+        <div class="benefit-item">
+            <div>
+                <i class="bi bi-lightning-charge"></i>
+            </div>
+            <h4>Rapidez</h4>
+            <p>Operaciones simples e inmediatas para que ganes tiempo cada día.</p>
+        </div>
+
+        <div class="benefit-item">
+            <div>
+                <i class="bi bi-headset"></i>
+            </div>
+            <h4>Atención 24/7</h4>
+            <p>Canales digitales y soporte para ayudarte cuando lo necesites.</p>
+        </div>
+
+        <div class="benefit-item">
+            <div>
+                <i class="bi bi-geo-alt"></i>
+            </div>
+            <h4>Cobertura</h4>
+            <p>Sucursales, cajeros y canales digitales disponibles para ti.</p>
+        </div>
+    </section>
+
+    <!-- BANCA DIGITAL -->
+    <section id="app" class="public-app-banner">
+        <div class="phone-preview">
+            <div class="phone-screen">
+                <div class="phone-logo">GBA</div>
+                <p>¡Hola!</p>
+                <span>Bienvenido a tu banca digital</span>
+
+                <div class="phone-actions">
+                    <div>
+                        <i class="bi bi-send"></i>
+                        <small>Transferir</small>
+                    </div>
+
+                    <div>
+                        <i class="bi bi-receipt"></i>
+                        <small>Pagar</small>
+                    </div>
+
+                    <div>
+                        <i class="bi bi-wallet2"></i>
+                        <small>Cuentas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="app-banner-text">
+            <span>Banca digital</span>
+            <h2>Tu banco, siempre contigo.</h2>
+            <p>
+                Descarga nuestra aplicación y disfruta de una experiencia moderna, segura
+                y diseñada para realizar tus operaciones de manera rápida.
+            </p>
+
+            <div class="store-buttons">
+                <button type="button">
+                    <i class="bi bi-google-play"></i>
+                    Google Play
+                </button>
+
+                <button type="button">
+                    <i class="bi bi-apple"></i>
+                    App Store
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- NOSOTROS -->
+    <section id="nosotros" class="public-about">
+        <div class="about-image">
+            <i class="bi bi-buildings"></i>
+            <div>
+                <strong>GBA CREDOMATIC</strong>
+                <span>Confianza, tecnología y solidez financiera</span>
+            </div>
+        </div>
+
+        <div class="about-content">
+            <span>Sobre nosotros</span>
+            <h2>Un banco moderno para personas que avanzan</h2>
+            <p>
+                En <strong>BANCO GBA CREDOMATIC</strong> trabajamos cada día para ser el aliado financiero
+                de nuestros clientes. Combinamos innovación, seguridad y experiencia para ofrecer
+                productos y servicios que impulsen el bienestar, el crecimiento y la confianza.
+            </p>
+
+            <div class="about-stats">
+                <div>
+                    <strong>+1.5M</strong>
+                    <span>Clientes satisfechos</span>
+                </div>
+
+                <div>
+                    <strong>+50</strong>
+                    <span>Sucursales</span>
+                </div>
+
+                <div>
+                    <strong>25+</strong>
+                    <span>Años de confianza</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<footer class="public-footer">
+    <div>
+        <div class="footer-brand">
+            <div class="public-logo">GBA</div>
+            <strong>GBA CREDOMATIC</strong>
+        </div>
+
+        <p>
+            Soluciones financieras seguras e innovadoras para acompañarte siempre.
+        </p>
+    </div>
+
+    <div>
+        <h5>Enlaces rápidos</h5>
+        <a href="#inicio">Inicio</a>
+        <a href="#servicios">Servicios</a>
+        <a href="#beneficios">Beneficios</a>
+        <a href="#contacto">Contacto</a>
+    </div>
+
+    <div>
+        <h5>Contáctanos</h5>
+        <p><i class="bi bi-telephone"></i> (502) 2333-0000</p>
+        <p><i class="bi bi-envelope"></i> info@gbacredomatic.com.gt</p>
+        <p><i class="bi bi-geo-alt"></i> Guatemala, Guatemala</p>
+    </div>
+
+    <div>
+        <h5>Canales digitales</h5>
+        <p>Realiza tus operaciones de forma fácil y segura.</p>
+        <a href="{{ url_for('login') }}" class="footer-login">Ir a banca en línea</a>
+    </div>
+</footer>
+
+<div class="public-copy">
+    © 2024 BANCO GBA CREDOMATIC. Todos los derechos reservados.
+</div>
+
+<!-- Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- JavaScript correcto para Flask -->
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+
+</body>
+</html>
