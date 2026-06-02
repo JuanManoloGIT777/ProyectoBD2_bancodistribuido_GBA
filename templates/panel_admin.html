@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>GBA CREDOMATIC | Panel Administrador</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css') }}">
+</head>
+<body>
+
+<div class="app-layout">
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">GBA</div>
+            <div>
+                <h4>GBA CREDOMATIC</h4>
+                <span>Administración</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <button class="menu-link active" data-section="panel">Panel Administrativo</button>
+            <button class="menu-link" data-section="usuarios">Usuarios</button>
+            <button class="menu-link" data-section="clientes">Clientes</button>
+            <button class="menu-link" data-section="cuentas">Cuentas</button>
+            <button class="menu-link" data-section="reportes">Reportes</button>
+            <button class="menu-link" data-section="auditoria">Auditoría</button>
+        </nav>
+
+        <div class="sidebar-status">
+            <span>Rol activo</span>
+            <strong>Administrador</strong>
+        </div>
+    </aside>
+
+    <main class="content">
+
+        <header class="top-header panel-header-clean admin-header-clean">
+            <div class="panel-header-info">
+                <span class="panel-header-badge">Nivel administrativo superior</span>
+                <p class="section-label">Centro de Control Administrativo</p>
+                <h1 id="tituloSeccion">Panel Administrativo</h1>
+                <span id="subtituloSeccion">
+                    Supervisión general, reportes, clientes, cuentas y control interno del sistema bancario.
+                </span>
+            </div>
+
+            <div class="panel-session-box">
+                <div class="panel-session-logo">GBA</div>
+
+                <div class="panel-session-info">
+                    <small>Sesión activa</small>
+                    <strong>{{ session.nombre_completo }}</strong>
+                </div>
+
+                <a href="{{ url_for('logout') }}" class="panel-logout-btn">
+                    Cerrar sesión
+                </a>
+            </div>
+        </header>
+
+        {% with mensajes = get_flashed_messages(with_categories=true) %}
+            {% if mensajes %}
+                {% for categoria, mensaje in mensajes %}
+                    <div class="alert alert-{{ categoria }}">
+                        {{ mensaje }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- PANEL ADMINISTRATIVO -->
+        <section id="panel" class="app-section active-section">
+
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="metric-card admin-metric">
+                        <span>Usuarios internos</span>
+                        <h2>{{ total_usuarios }}</h2>
+                        <p>Usuarios autorizados.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="metric-card admin-metric">
+                        <span>Clientes</span>
+                        <h2>{{ total_clientes }}</h2>
+                        <p>Clientes registrados.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="metric-card admin-metric">
+                        <span>Cuentas</span>
+                        <h2>{{ total_cuentas }}</h2>
+                        <p>Cuentas bancarias.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="metric-card highlight admin-metric">
+                        <span>Transacciones</span>
+                        <h2>{{ total_transacciones }}</h2>
+                        <p>Operaciones registradas.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRÁFICAS ADMINISTRATIVAS -->
+            <div class="row g-4 mb-4">
+                <div class="col-lg-6">
+                    <div class="panel-card admin-graph-card">
+                        <div class="panel-title">
+                            <div>
+                                <h4>Distribución de transacciones</h4>
+                                <span>Transacciones agrupadas por tipo de operación</span>
+                            </div>
+                        </div>
+
+                        <canvas id="graficaPastelAdmin"></canvas>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="panel-card admin-graph-card">
+                        <div class="panel-title">
+                            <div>
+                                <h4>Transacciones por fecha</h4>
+                                <span>Actividad registrada en los últimos días</span>
+                            </div>
+                        </div>
+
+                        <canvas id="graficaLineaAdmin"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                id="datosGraficasAdmin"
+                data-pastel-labels='{{ grafica_pastel_labels | tojson | safe }}'
+                data-pastel-valores='{{ grafica_pastel_valores | tojson | safe }}'
+                data-linea-labels='{{ grafica_linea_fechas | tojson | safe }}'
+                data-linea-valores='{{ grafica_linea_cantidades | tojson | safe }}'
+                style="display: none;">
+            </div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-lg-6">
+                    <div class="panel-card admin-chart-card">
+                        <div class="panel-title">
+                            <div>
+                                <h4>Actividad por tipo de transacción</h4>
+                                <span>Distribución general de operaciones registradas</span>
+                            </div>
+                        </div>
+
+                        {% for item in resumen_tipos %}
+                            <div class="chart-row">
+                                <div class="chart-row-info">
+                                    <strong>{{ item.tipo_transaccion }}</strong>
+                                    <span>{{ item.cantidad }} operación(es)</span>
+                                </div>
+
+                                <div class="chart-bar">
+                                    <div 
+                                        class="chart-bar-fill" 
+                                        data-porcentaje="{{ item.porcentaje | default(0) }}">
+                                    </div>
+                                </div>
+
+                                <small>{{ item.porcentaje }}%</small>
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">
+                                Aún no hay transacciones para mostrar.
+                            </p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="panel-card admin-summary-card">
+                        <div class="panel-title">
+                            <div>
+                                <h4>Resumen financiero del sistema</h4>
+                                <span>Indicadores generales para supervisión administrativa</span>
+                            </div>
+                        </div>
+
+                        <div class="summary-line">
+                            <span>Saldo total en cuentas</span>
+                            <strong>Q{{ "%.2f"|format(saldo_total) }}</strong>
+                        </div>
+
+                        <div class="summary-line">
+                            <span>Monto total transaccionado</span>
+                            <strong>Q{{ "%.2f"|format(monto_total_transacciones) }}</strong>
+                        </div>
+
+                        <div class="summary-line">
+                            <span>Eventos de auditoría</span>
+                            <strong>{{ total_eventos }}</strong>
+                        </div>
+
+                        <div class="summary-line">
+                            <span>Estado general</span>
+                            <strong class="text-success">Operativo</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- USUARIOS -->
+        <section id="usuarios" class="app-section">
+
+            <div class="panel-card mb-4">
+                <div class="panel-title">
+                    <div>
+                        <h4>Registrar usuario interno</h4>
+                        <span>Creación de usuarios administrativos, cajeros o auditores sin salir del panel</span>
+                    </div>
+
+                    <span class="badge bg-primary">Gestión interna</span>
+                </div>
+
+                <form action="{{ url_for('crear_usuario_admin') }}" method="POST">
+                    <div class="row g-3">
+
+                        <div class="col-md-4">
+                            <label class="form-label">Nombre completo</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                name="nombre_completo" 
+                                placeholder="Ejemplo: Juan Pérez"
+                                required
+                            >
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Usuario</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                name="usuario" 
+                                placeholder="Ejemplo: jperez"
+                                required
+                            >
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Correo electrónico</label>
+                            <input 
+                                type="email" 
+                                class="form-control" 
+                                name="correo" 
+                                placeholder="usuario@correo.com"
+                                required
+                            >
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Rol</label>
+                            <select class="form-select" name="id_rol" required>
+                                <option value="">Seleccione un rol</option>
+
+                                {% for rol in roles %}
+                                    <option value="{{ rol.id_rol }}">
+                                        {{ rol.nombre_rol }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Contraseña</label>
+                            <input 
+                                type="password" 
+                                class="form-control" 
+                                name="clave" 
+                                placeholder="Mínimo 6 caracteres"
+                                required
+                            >
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Confirmar contraseña</label>
+                            <input 
+                                type="password" 
+                                class="form-control" 
+                                name="confirmar_clave" 
+                                placeholder="Repita la contraseña"
+                                required
+                            >
+                        </div>
+
+                    </div>
+
+                    <button type="submit" class="btn btn-primary mt-3">
+                        Guardar usuario interno
+                    </button>
+                </form>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-title">
+                    <div>
+                        <h4>Usuarios internos del sistema</h4>
+                        <span>Administración de accesos autorizados por rol</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Nombre completo</th>
+                                <th>Correo</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                                <th>Fecha registro</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for usuario in usuarios %}
+                                <tr>
+                                    <td>{{ usuario.usuario }}</td>
+                                    <td>{{ usuario.nombre_completo }}</td>
+                                    <td>{{ usuario.correo }}</td>
+                                    <td>{{ usuario.nombre_rol }}</td>
+                                    <td>
+                                        {% if usuario.estado == 'ACTIVO' %}
+                                            <span class="badge bg-success">
+                                                {{ usuario.estado }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                                {{ usuario.estado }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ usuario.fecha_registro }}</td>
+                                    <td>
+                                        {% if usuario.id_usuario == session.id_usuario %}
+                                            <span class="text-muted">Usuario actual</span>
+
+                                        {% elif usuario.estado == 'ACTIVO' %}
+                                            <form 
+                                                action="{{ url_for('inactivar_usuario_admin', id_usuario=usuario.id_usuario) }}" 
+                                                method="POST"
+                                                onsubmit="return confirm('¿Está seguro de inactivar este usuario?');"
+                                            >
+                                                <div class="admin-action-box">
+                                                    <input 
+                                                        type="password" 
+                                                        name="clave_confirmacion" 
+                                                        class="form-control form-control-sm"
+                                                        placeholder="Contraseña admin"
+                                                        required
+                                                    >
+
+                                                    <button type="submit" class="btn btn-danger btn-sm">
+                                                        Inactivar
+                                                    </button>
+                                                </div>
+                                            </form>
+
+                                        {% else %}
+                                            <form 
+                                                action="{{ url_for('activar_usuario_admin', id_usuario=usuario.id_usuario) }}" 
+                                                method="POST"
+                                                onsubmit="return confirm('¿Está seguro de activar este usuario?');"
+                                            >
+                                                <div class="admin-action-box">
+                                                    <input 
+                                                        type="password" 
+                                                        name="clave_confirmacion" 
+                                                        class="form-control form-control-sm"
+                                                        placeholder="Contraseña admin"
+                                                        required
+                                                    >
+
+                                                    <button type="submit" class="btn btn-success btn-sm">
+                                                        Activar
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        No hay usuarios registrados.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- CLIENTES -->
+        <section id="clientes" class="app-section">
+            <div class="panel-card">
+                <div class="panel-title">
+                    <div>
+                        <h4>Clientes registrados</h4>
+                        <span>Consulta administrativa de clientes creados por el área operativa</span>
+                    </div>
+
+                    <span class="badge bg-primary">Control administrativo</span>
+                </div>
+
+                <div class="admin-search-box">
+                    <input 
+                        type="text" 
+                        class="form-control buscador-tabla" 
+                        data-tabla="tablaClientesAdmin"
+                        placeholder="Buscar cliente por DPI, nombre, teléfono, correo, dirección o estado..."
+                    >
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="tablaClientesAdmin">
+                        <thead>
+                            <tr>
+                                <th>DPI</th>
+                                <th>Nombre completo</th>
+                                <th>Teléfono</th>
+                                <th>Correo</th>
+                                <th>Dirección</th>
+                                <th>Estado</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for cliente in clientes %}
+                                <tr>
+                                    <td>{{ cliente.dpi }}</td>
+                                    <td>{{ cliente.nombres }} {{ cliente.apellidos }}</td>
+                                    <td>{{ cliente.telefono or 'N/A' }}</td>
+                                    <td>{{ cliente.correo or 'N/A' }}</td>
+                                    <td>{{ cliente.direccion or 'N/A' }}</td>
+                                    <td>
+                                        {% if cliente.estado == 'ACTIVO' %}
+                                            <span class="badge bg-success">
+                                                {{ cliente.estado }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                                {{ cliente.estado }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if cliente.estado == 'ACTIVO' %}
+                                            <form 
+                                                action="{{ url_for('inactivar_cliente_admin', id_cliente=cliente.id_cliente) }}" 
+                                                method="POST"
+                                                onsubmit="return confirm('¿Está seguro de inactivar este cliente?');"
+                                            >
+                                                <div class="admin-action-box">
+                                                    <input 
+                                                        type="password" 
+                                                        name="clave_confirmacion" 
+                                                        class="form-control form-control-sm"
+                                                        placeholder="Contraseña admin"
+                                                        required
+                                                    >
+
+                                                    <button type="submit" class="btn btn-danger btn-sm">
+                                                        Inactivar
+                                                    </button>
+                                                </div>
+                                            </form>
+
+                                        {% else %}
+                                            <form 
+                                                action="{{ url_for('activar_cliente_admin', id_cliente=cliente.id_cliente) }}" 
+                                                method="POST"
+                                                onsubmit="return confirm('¿Está seguro de activar este cliente?');"
+                                            >
+                                                <div class="admin-action-box">
+                                                    <input 
+                                                        type="password" 
+                                                        name="clave_confirmacion" 
+                                                        class="form-control form-control-sm"
+                                                        placeholder="Contraseña admin"
+                                                        required
+                                                    >
+
+                                                    <button type="submit" class="btn btn-success btn-sm">
+                                                        Activar
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        No hay clientes registrados.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- CUENTAS -->
+        <section id="cuentas" class="app-section">
+            <div class="panel-card">
+                <div class="panel-title">
+                    <div>
+                        <h4>Cuentas bancarias</h4>
+                        <span>Consulta administrativa de cuentas asociadas a clientes registrados</span>
+                    </div>
+
+                    <span class="badge bg-primary">Control administrativo</span>
+                </div>
+
+                <div class="admin-search-box">
+                    <input 
+                        type="text" 
+                        class="form-control buscador-tabla" 
+                        data-tabla="tablaCuentasAdmin"
+                        placeholder="Buscar por número de cuenta, cliente, DPI, tipo de cuenta, saldo o estado..."
+                    >
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="tablaCuentasAdmin">
+                        <thead>
+                            <tr>
+                                <th>Número de cuenta</th>
+                                <th>Cliente</th>
+                                <th>DPI</th>
+                                <th>Tipo</th>
+                                <th>Saldo</th>
+                                <th>Estado</th>
+                                <th>Fecha apertura</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for cuenta in cuentas_admin %}
+                                <tr>
+                                    <td>{{ cuenta.numero_cuenta }}</td>
+                                    <td>{{ cuenta.nombres }} {{ cuenta.apellidos }}</td>
+                                    <td>{{ cuenta.dpi }}</td>
+                                    <td>{{ cuenta.nombre_tipo }}</td>
+                                    <td>Q{{ "%.2f"|format(cuenta.saldo) }}</td>
+                                    <td>
+                                        {% if cuenta.estado in ['ACTIVA', 'ACTIVO'] %}
+                                            <span class="badge bg-success">
+                                                {{ cuenta.estado }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                                {{ cuenta.estado }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ cuenta.fecha_apertura }}</td>
+                                    <td>
+                                        {% if cuenta.estado in ['ACTIVA', 'ACTIVO'] %}
+                                            <form 
+                                                action="{{ url_for('inactivar_cuenta_admin', id_cuenta=cuenta.id_cuenta) }}" 
+                                                method="POST"
+                                                onsubmit="return confirm('¿Está seguro de inactivar esta cuenta?');"
+                                            >
+                                                <div class="admin-action-box">
+                                                    <input 
+                                                        type="password" 
+                                                        name="clave_confirmacion" 
+                                                        class="form-control form-control-sm"
+                                                        placeholder="Contraseña admin"
+                                                        required
+                                                    >
+
+                                                    <button type="submit" class="btn btn-danger btn-sm">
+                                                        Inactivar
+                                                    </button>
+                                                </div>
+                                            </form>
+
+                                        {% else %}
+                                            <form 
+                                                action="{{ url_for('activar_cuenta_admin', id_cuenta=cuenta.id_cuenta) }}" 
+                                                method="POST"
+                                                onsubmit="return confirm('¿Está seguro de activar esta cuenta?');"
+                                            >
+                                                <div class="admin-action-box">
+                                                    <input 
+                                                        type="password" 
+                                                        name="clave_confirmacion" 
+                                                        class="form-control form-control-sm"
+                                                        placeholder="Contraseña admin"
+                                                        required
+                                                    >
+
+                                                    <button type="submit" class="btn btn-success btn-sm">
+                                                        Activar
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        No hay cuentas registradas.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- REPORTES -->
+        <section id="reportes" class="app-section">
+            <div class="panel-card">
+                <div class="panel-title">
+                    <div>
+                        <h4>Reporte de transacciones</h4>
+                        <span>Supervisión administrativa de depósitos, retiros, transferencias, pagos y anulaciones</span>
+                    </div>
+
+                    <span class="badge bg-primary">Reporte principal</span>
+                </div>
+
+                <div class="report-summary-grid mb-4">
+                    <div>
+                        <span>Total de transacciones</span>
+                        <strong>{{ total_transacciones }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Monto total</span>
+                        <strong>Q{{ "%.2f"|format(monto_total_transacciones) }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Eventos auditados</span>
+                        <strong>{{ total_eventos }}</strong>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Tipo</th>
+                                <th>Cuenta origen</th>
+                                <th>Cuenta destino</th>
+                                <th>Monto</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                                <th>Descripción</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for trx in transacciones_reporte %}
+                                <tr>
+                                    <td>{{ trx.codigo_transaccion }}</td>
+                                    <td>{{ trx.tipo_transaccion }}</td>
+                                    <td>{{ trx.id_cuenta_origen or 'N/A' }}</td>
+                                    <td>{{ trx.id_cuenta_destino or 'N/A' }}</td>
+                                    <td>Q{{ "%.2f"|format(trx.monto) }}</td>
+                                    <td>
+                                        {% if trx.estado == 'ANULADA' %}
+                                            <span class="badge bg-danger">
+                                                {{ trx.estado }}
+                                            </span>
+                                        {% elif trx.estado == 'PENDIENTE' %}
+                                            <span class="badge bg-warning text-dark">
+                                                {{ trx.estado }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-success">
+                                                {{ trx.estado }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ trx.fecha_transaccion }}</td>
+                                    <td>{{ trx.descripcion }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        No hay transacciones registradas para mostrar.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- AUDITORÍA -->
+        <section id="auditoria" class="app-section">
+            <div class="panel-card">
+                <div class="panel-title">
+                    <div>
+                        <h4>Auditoría del sistema</h4>
+                        <span>Últimos eventos registrados dentro del sistema</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Usuario</th>
+                                <th>Módulo</th>
+                                <th>Operación</th>
+                                <th>Descripción</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for evento in eventos %}
+                                <tr>
+                                    <td>{{ evento.fecha }}</td>
+                                    <td>{{ evento.usuario }}</td>
+                                    <td>{{ evento.modulo }}</td>
+                                    <td>{{ evento.operacion }}</td>
+                                    <td>{{ evento.descripcion }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        No hay eventos registrados.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+
+</body>
+</html>
