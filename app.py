@@ -11,6 +11,61 @@ app = Flask(__name__)
 app.secret_key = "gba_credomatic_clave_secreta_segura"
 
 
+# =========================
+# AUDITORÍA DESDE FLASK
+# =========================
+
+def registrar_auditoria(id_usuario, modulo, operacion, descripcion):
+    conexion = obtener_conexion()
+
+    if conexion is None:
+        return
+
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO auditoria (id_usuario, modulo, operacion, descripcion)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (id_usuario, modulo, operacion, descripcion)
+            )
+
+        conexion.commit()
+
+    except Exception as error:
+        print("Error al registrar auditoría:", error)
+
+    finally:
+        conexion.close()
+
+
+# =========================
+# CONTEXTO DE AUDITORÍA PARA TRIGGERS
+# Envía a PostgreSQL el usuario que está logueado.
+# Los triggers usan este contexto para guardar id_usuario y usuario real.
+# =========================
+
+def establecer_contexto_auditoria(conexion):
+    if "id_usuario" not in session:
+        return
+
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                "SELECT set_config('app.id_usuario', %s, true)",
+                (str(session["id_usuario"]),)
+            )
+
+            cursor.execute(
+                "SELECT set_config('app.usuario', %s, true)",
+                (session["usuario"],)
+            )
+
+    except Exception as error:
+        print("Error al establecer contexto de auditoría:", error)
+
+
 
 # =========================
 # USUARIOS BASE
@@ -687,3 +742,427 @@ def crear_usuario_admin():
         conexion.close()
 
     return redirect(url_for("panel_admin", seccion="usuarios"))
+
+# =========================
+# ACTIVAR / INACTIVAR USUARIOS, CLIENTES Y CUENTAS
+# =========================
+
+@app.route("/admin/usuarios/inactivar/<int:id_usuario>", methods=["POST"])
+@rol_requerido("ADMINISTRADOR")
+def inactivar_usuario_admin(id_usuario):
+    clave_confirmacion = request.form.get("clave_confirmacion", "").strip()
+
+    if not clave_confirmacion:
+        flash("Debe ingresar su contraseña para confirmar la inactivación.", "warning")
+        return redirect(url_for("panel_admin", seccion="usuarios"))
+
+    if not validar_clave_admin(clave_confirmacion):
+        flash("La contraseña de confirmación es incorrecta.", "danger")
+        return redirect(url_for("panel_admin", seccion="usuarios"))
+
+    if id_usuario == session.get("id_usuario"):
+        flash("No puede inactivar su propio usuario.", "warning")
+        return redirect(url_for("panel_admin", seccion="usuarios"))
+
+    conexion = obtener_conexion()
+
+    if conexion is None:
+        flash("No se pudo conectar con la base de datos.", "danger")
+        return redirect(url_for("panel_admin", seccion="usuarios"))
+
+    establecer_contexto_auditoria(conexion)
+
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT usuario, estado
+                FROM usuarios
+                WHERE id_usuario = %s
+                FOR UPDATE
+                """,
+                (id_usuario,)
+            )
+
+            usuario = cursor.fetchone()
+
+            if not usuario:
+                flash("El usuario seleccionado no existe.", "danger")
+                return redirect(url_for("panel_admin", seccion="usuarios"))
+
+            if usuario["estado"] == "INACTIVO":
+                flash("El usuario ya se encuentra inactivo.", "warning")
+                return redirect(url_for("panel_admin", seccion="usuarios"))
+
+            cursor.execute(
+                """
+                UPDATE usuarios
+                SET estado = 'INACTIVO'
+                WHERE id_usuario = %s
+                """,
+                (id_usuario,)
+            )
+
+        conexion.commit()
+        flash("Usuario inactivado correctamente.", "success")
+
+    except Exception as error:
+        conexion.rollback()
+        print("Error al inactivar usuario:", error)
+        flash("No se pudo inactivar el usuario.", "danger")
+
+    finally:
+        conexion.close()
+
+    return redirect(url_for("panel_admin", seccion="usuarios"))
+
+
+@app.route("/admin/usuarios/activar/<int:id_usuario>", methods=["POST"])
+@rol_requerido("ADMINISTRADOR")
+def activar_usuario_admin(id_usuario):
+    clave_confirmacion = request.form.get("clave_confirmacion", "").strip()
+
+    if not clave_confirmacion:
+        flash("Debe ingresar su contraseña para confirmar la activación.", "warning")
+        return redirect(url_for("panel_admin", seccion="usuarios"))
+
+    if not validar_clave_admin(clave_confirmacion):
+        flash("La contraseña de confirmación es incorrecta.", "danger")
+        return redirect(url_for("panel_admin", seccion="usuarios"))
+
+    conexion = obtener_conexion()
+
+    if conexion is None:
+        flash("No se pudo conectar con la base de datos.", "danger")
+        return redirect(url_for("panel_admin", seccion="usuarios"))
+
+    establecer_contexto_auditoria(conexion)
+
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT usuario, estado
+                FROM usuarios
+                WHERE id_usuario = %s
+                FOR UPDATE
+                """,
+                (id_usuario,)
+            )
+
+            usuario = cursor.fetchone()
+
+            if not usuario:
+                flash("El usuario seleccionado no existe.", "danger")
+                return redirect(url_for("panel_admin", seccion="usuarios"))
+
+            if usuario["estado"] == "ACTIVO":
+                flash("El usuario ya se encuentra activo.", "warning")
+                return redirect(url_for("panel_admin", seccion="usuarios"))
+
+            cursor.execute(
+                """
+                UPDATE usuarios
+                SET estado = 'ACTIVO'
+                WHERE id_usuario = %s
+                """,
+                (id_usuario,)
+            )
+
+        conexion.commit()
+        flash("Usuario activado correctamente.", "success")
+
+    except Exception as error:
+        conexion.rollback()
+        print("Error al activar usuario:", error)
+        flash("No se pudo activar el usuario.", "danger")
+
+    finally:
+        conexion.close()
+
+    return redirect(url_for("panel_admin", seccion="usuarios"))
+
+
+@app.route("/admin/clientes/inactivar/<int:id_cliente>", methods=["POST"])
+@rol_requerido("ADMINISTRADOR")
+def inactivar_cliente_admin(id_cliente):
+    clave_confirmacion = request.form.get("clave_confirmacion", "").strip()
+
+    if not clave_confirmacion:
+        flash("Debe ingresar su contraseña para confirmar la inactivación.", "warning")
+        return redirect(url_for("panel_admin", seccion="clientes"))
+
+    if not validar_clave_admin(clave_confirmacion):
+        flash("La contraseña de confirmación es incorrecta.", "danger")
+        return redirect(url_for("panel_admin", seccion="clientes"))
+
+    conexion = obtener_conexion()
+
+    if conexion is None:
+        flash("No se pudo conectar con la base de datos.", "danger")
+        return redirect(url_for("panel_admin", seccion="clientes"))
+
+    establecer_contexto_auditoria(conexion)
+
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id_cliente, dpi, nombres, apellidos, estado
+                FROM clientes
+                WHERE id_cliente = %s
+                FOR UPDATE
+                """,
+                (id_cliente,)
+            )
+
+            cliente = cursor.fetchone()
+
+            if not cliente:
+                flash("El cliente seleccionado no existe.", "danger")
+                return redirect(url_for("panel_admin", seccion="clientes"))
+
+            if cliente["estado"] == "INACTIVO":
+                flash("El cliente ya se encuentra inactivo.", "warning")
+                return redirect(url_for("panel_admin", seccion="clientes"))
+
+            cursor.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM cuentas
+                WHERE id_cliente = %s
+                  AND estado IN ('ACTIVA', 'ACTIVO')
+                """,
+                (id_cliente,)
+            )
+
+            cuentas_activas = cursor.fetchone()["total"]
+
+            if cuentas_activas > 0:
+                flash("No se puede inactivar el cliente porque tiene cuentas activas.", "warning")
+                return redirect(url_for("panel_admin", seccion="clientes"))
+
+            cursor.execute(
+                """
+                UPDATE clientes
+                SET estado = 'INACTIVO'
+                WHERE id_cliente = %s
+                """,
+                (id_cliente,)
+            )
+
+        conexion.commit()
+        flash("Cliente inactivado correctamente.", "success")
+
+    except Exception as error:
+        conexion.rollback()
+        print("Error al inactivar cliente:", error)
+        flash("No se pudo inactivar el cliente.", "danger")
+
+    finally:
+        conexion.close()
+
+    return redirect(url_for("panel_admin", seccion="clientes"))
+
+
+@app.route("/admin/clientes/activar/<int:id_cliente>", methods=["POST"])
+@rol_requerido("ADMINISTRADOR")
+def activar_cliente_admin(id_cliente):
+    clave_confirmacion = request.form.get("clave_confirmacion", "").strip()
+
+    if not clave_confirmacion:
+        flash("Debe ingresar su contraseña para confirmar la activación.", "warning")
+        return redirect(url_for("panel_admin", seccion="clientes"))
+
+    if not validar_clave_admin(clave_confirmacion):
+        flash("La contraseña de confirmación es incorrecta.", "danger")
+        return redirect(url_for("panel_admin", seccion="clientes"))
+
+    conexion = obtener_conexion()
+
+    if conexion is None:
+        flash("No se pudo conectar con la base de datos.", "danger")
+        return redirect(url_for("panel_admin", seccion="clientes"))
+
+    establecer_contexto_auditoria(conexion)
+
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id_cliente, dpi, nombres, apellidos, estado
+                FROM clientes
+                WHERE id_cliente = %s
+                FOR UPDATE
+                """,
+                (id_cliente,)
+            )
+
+            cliente = cursor.fetchone()
+
+            if not cliente:
+                flash("El cliente seleccionado no existe.", "danger")
+                return redirect(url_for("panel_admin", seccion="clientes"))
+
+            if cliente["estado"] == "ACTIVO":
+                flash("El cliente ya se encuentra activo.", "warning")
+                return redirect(url_for("panel_admin", seccion="clientes"))
+
+            cursor.execute(
+                """
+                UPDATE clientes
+                SET estado = 'ACTIVO'
+                WHERE id_cliente = %s
+                """,
+                (id_cliente,)
+            )
+
+        conexion.commit()
+        flash("Cliente activado correctamente.", "success")
+
+    except Exception as error:
+        conexion.rollback()
+        print("Error al activar cliente:", error)
+        flash("No se pudo activar el cliente.", "danger")
+
+    finally:
+        conexion.close()
+
+    return redirect(url_for("panel_admin", seccion="clientes"))
+
+
+@app.route("/admin/cuentas/inactivar/<int:id_cuenta>", methods=["POST"])
+@rol_requerido("ADMINISTRADOR")
+def inactivar_cuenta_admin(id_cuenta):
+    clave_confirmacion = request.form.get("clave_confirmacion", "").strip()
+
+    if not clave_confirmacion:
+        flash("Debe ingresar su contraseña para confirmar la inactivación.", "warning")
+        return redirect(url_for("panel_admin", seccion="cuentas"))
+
+    if not validar_clave_admin(clave_confirmacion):
+        flash("La contraseña de confirmación es incorrecta.", "danger")
+        return redirect(url_for("panel_admin", seccion="cuentas"))
+
+    conexion = obtener_conexion()
+
+    if conexion is None:
+        flash("No se pudo conectar con la base de datos.", "danger")
+        return redirect(url_for("panel_admin", seccion="cuentas"))
+
+    establecer_contexto_auditoria(conexion)
+
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id_cuenta, numero_cuenta, saldo, estado
+                FROM cuentas
+                WHERE id_cuenta = %s
+                FOR UPDATE
+                """,
+                (id_cuenta,)
+            )
+
+            cuenta = cursor.fetchone()
+
+            if not cuenta:
+                flash("La cuenta seleccionada no existe.", "danger")
+                return redirect(url_for("panel_admin", seccion="cuentas"))
+
+            if cuenta["estado"] in ("INACTIVA", "INACTIVO"):
+                flash("La cuenta ya se encuentra inactiva.", "warning")
+                return redirect(url_for("panel_admin", seccion="cuentas"))
+
+            if cuenta["saldo"] > 0:
+                flash("No se puede inactivar la cuenta porque aún tiene saldo disponible.", "warning")
+                return redirect(url_for("panel_admin", seccion="cuentas"))
+
+            cursor.execute(
+                """
+                UPDATE cuentas
+                SET estado = 'INACTIVA'
+                WHERE id_cuenta = %s
+                """,
+                (id_cuenta,)
+            )
+
+        conexion.commit()
+        flash("Cuenta inactivada correctamente.", "success")
+
+    except Exception as error:
+        conexion.rollback()
+        print("Error al inactivar cuenta:", error)
+        flash("No se pudo inactivar la cuenta.", "danger")
+
+    finally:
+        conexion.close()
+
+    return redirect(url_for("panel_admin", seccion="cuentas"))
+
+
+@app.route("/admin/cuentas/activar/<int:id_cuenta>", methods=["POST"])
+@rol_requerido("ADMINISTRADOR")
+def activar_cuenta_admin(id_cuenta):
+    clave_confirmacion = request.form.get("clave_confirmacion", "").strip()
+
+    if not clave_confirmacion:
+        flash("Debe ingresar su contraseña para confirmar la activación.", "warning")
+        return redirect(url_for("panel_admin", seccion="cuentas"))
+
+    if not validar_clave_admin(clave_confirmacion):
+        flash("La contraseña de confirmación es incorrecta.", "danger")
+        return redirect(url_for("panel_admin", seccion="cuentas"))
+
+    conexion = obtener_conexion()
+
+    if conexion is None:
+        flash("No se pudo conectar con la base de datos.", "danger")
+        return redirect(url_for("panel_admin", seccion="cuentas"))
+
+    establecer_contexto_auditoria(conexion)
+
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id_cuenta, numero_cuenta, estado
+                FROM cuentas
+                WHERE id_cuenta = %s
+                FOR UPDATE
+                """,
+                (id_cuenta,)
+            )
+
+            cuenta = cursor.fetchone()
+
+            if not cuenta:
+                flash("La cuenta seleccionada no existe.", "danger")
+                return redirect(url_for("panel_admin", seccion="cuentas"))
+
+            if cuenta["estado"] in ("ACTIVA", "ACTIVO"):
+                flash("La cuenta ya se encuentra activa.", "warning")
+                return redirect(url_for("panel_admin", seccion="cuentas"))
+
+            cursor.execute(
+                """
+                UPDATE cuentas
+                SET estado = 'ACTIVA'
+                WHERE id_cuenta = %s
+                """,
+                (id_cuenta,)
+            )
+
+        conexion.commit()
+        flash("Cuenta activada correctamente.", "success")
+
+    except Exception as error:
+        conexion.rollback()
+        print("Error al activar cuenta:", error)
+        flash("No se pudo activar la cuenta.", "danger")
+
+    finally:
+        conexion.close()
+
+    return redirect(url_for("panel_admin", seccion="cuentas"))
+

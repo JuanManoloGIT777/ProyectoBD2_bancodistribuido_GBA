@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>GBA CREDOMATIC | Panel Cajero</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css') }}">
+</head>
+<body>
+
+<div class="app-layout">
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">GBA</div>
+            <div>
+                <h4>GBA CREDOMATIC</h4>
+                <span>Operaciones</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <button class="menu-link active" data-section="panel">Panel Cajero</button>
+            <button class="menu-link" data-section="clientes">Clientes</button>
+            <button class="menu-link" data-section="cuentas">Cuentas</button>
+            <button class="menu-link" data-section="transacciones">Transacciones</button>
+            <button class="menu-link" data-section="pagos">Pagos</button>
+        </nav>
+
+        <div class="sidebar-status">
+            <span>Rol activo</span>
+            <strong>Cajero</strong>
+        </div>
+    </aside>
+
+    <main class="content">
+
+        <header class="top-header panel-header-clean cajero-header-clean">
+            <div class="panel-header-info">
+                <span class="panel-header-badge">Operación bancaria</span>
+                <p class="section-label">Centro de Atención y Transacciones</p>
+                <h1 id="tituloSeccion">Panel Cajero</h1>
+                <span id="subtituloSeccion">
+                    Registro de clientes, apertura de cuentas, depósitos, retiros, transferencias, pagos y anulaciones.
+                </span>
+            </div>
+
+            <div class="panel-session-box">
+                <div class="panel-session-logo">GBA</div>
+
+                <div class="panel-session-info">
+                    <small>Sesión activa</small>
+                    <strong>{{ session.nombre_completo }}</strong>
+                </div>
+
+                <a href="{{ url_for('logout') }}" class="panel-logout-btn">
+                    Cerrar sesión
+                </a>
+            </div>
+        </header>
+
+        {% with mensajes = get_flashed_messages(with_categories=true) %}
+            {% if mensajes %}
+                {% for categoria, mensaje in mensajes %}
+                    <div class="alert alert-{{ categoria }}">
+                        {{ mensaje }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- PANEL PRINCIPAL -->
+        <section id="panel" class="app-section active-section">
+
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <span>Clientes</span>
+                        <h2>{{ total_clientes }}</h2>
+                        <p>Clientes registrados.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <span>Cuentas</span>
+                        <h2>{{ total_cuentas }}</h2>
+                        <p>Cuentas creadas.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="metric-card highlight">
+                        <span>Transacciones</span>
+                        <h2>{{ total_transacciones }}</h2>
+                        <p>Operaciones realizadas.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <span>Saldo total</span>
+                        <h2>Q{{ "%.2f"|format(saldo_total) }}</h2>
+                        <p>Saldo acumulado.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+
+                <div class="col-lg-7">
+                    <div class="panel-card cajero-dashboard-card">
+                        <div class="panel-title">
+                            <div>
+                                <h4>Resumen operativo</h4>
+                                <span>Funciones principales disponibles para el cajero</span>
+                            </div>
+                        </div>
+
+                        <div class="system-item clean-system-item">
+                            <div>
+                                <strong>Clientes</strong>
+                                <p class="mb-0 text-muted">
+                                    Registro y consulta de clientes bancarios.
+                                </p>
+                            </div>
+
+                            <span class="status-pill status-active">
+                                Activo
+                            </span>
+                        </div>
+
+                        <div class="system-item clean-system-item">
+                            <div>
+                                <strong>Cuentas</strong>
+                                <p class="mb-0 text-muted">
+                                    Apertura y revisión de cuentas asociadas a clientes.
+                                </p>
+                            </div>
+
+                            <span class="status-pill status-active">
+                                Activo
+                            </span>
+                        </div>
+
+                        <div class="system-item clean-system-item">
+                            <div>
+                                <strong>Transacciones</strong>
+                                <p class="mb-0 text-muted">
+                                    Depósitos, retiros, transferencias y anulaciones.
+                                </p>
+                            </div>
+
+                            <span class="status-pill status-operational">
+                                Operativo
+                            </span>
+                        </div>
+
+                        <div class="system-item clean-system-item">
+                            <div>
+                                <strong>Pagos</strong>
+                                <p class="mb-0 text-muted">
+                                    Registro de pagos de servicios desde cuentas activas.
+                                </p>
+                            </div>
+
+                            <span class="status-pill status-operational">
+                                Operativo
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-5">
+                    <div class="panel-card cajero-dashboard-card">
+                        <div class="panel-title">
+                            <div>
+                                <h4>Actividad reciente</h4>
+                                <span>Últimas operaciones procesadas en el sistema</span>
+                            </div>
+                        </div>
+
+                        <div class="recent-activity-list">
+                            {% for trx in transacciones[:5] %}
+                                <div class="recent-activity-item">
+                                    <div>
+                                        <strong>{{ trx.tipo_transaccion }}</strong>
+                                        <p class="mb-0 text-muted">
+                                            Código: {{ trx.codigo_transaccion }}
+                                        </p>
+                                    </div>
+
+                                    <div class="recent-activity-amount">
+                                        <strong>Q{{ "%.2f"|format(trx.monto) }}</strong>
+                                        <span>{{ trx.estado }}</span>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <p class="text-muted mb-0">
+                                    Aún no hay transacciones recientes.
+                                </p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="row g-4">
+
+                <div class="col-lg-6">
+                    <div class="panel-card cajero-dashboard-card">
+                        <div class="panel-title">
+                            <div>
+                                <h4>Últimas cuentas creadas</h4>
+                                <span>Cuentas bancarias registradas recientemente</span>
+                            </div>
+                        </div>
+
+                        <div class="mini-table-list">
+                            {% for cuenta in cuentas[:5] %}
+                                <div class="mini-table-item">
+                                    <div>
+                                        <strong>{{ cuenta.numero_cuenta }}</strong>
+                                        <p class="mb-0 text-muted">
+                                            {{ cuenta.nombres }} {{ cuenta.apellidos }}
+                                        </p>
+                                    </div>
+
+                                    <div class="mini-table-right">
+                                        <span>{{ cuenta.nombre_tipo }}</span>
+                                        <strong>Q{{ "%.2f"|format(cuenta.saldo) }}</strong>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <p class="text-muted mb-0">
+                                    Aún no hay cuentas registradas.
+                                </p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="panel-card cajero-dashboard-card">
+                        <div class="panel-title">
+                            <div>
+                                <h4>Pagos recientes</h4>
+                                <span>Últimos pagos de servicios registrados</span>
+                            </div>
+                        </div>
+
+                        <div class="mini-table-list">
+                            {% for pago in pagos[:5] %}
+                                <div class="mini-table-item">
+                                    <div>
+                                        <strong>{{ pago.nombre_servicio }}</strong>
+                                        <p class="mb-0 text-muted">
+                                            Ref: {{ pago.referencia }}
+                                        </p>
+                                    </div>
+
+                                    <div class="mini-table-right">
+                                        <span>{{ pago.estado }}</span>
+                                        <strong>Q{{ "%.2f"|format(pago.monto) }}</strong>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <p class="text-muted mb-0">
+                                    Aún no hay pagos registrados.
+                                </p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- CLIENTES -->
+        <section id="clientes" class="app-section">
+            <div class="panel-card mb-4">
+                <div class="panel-title">
+                    <div>
+                        <h4>Registrar cliente</h4>
+                        <span>Ingreso de datos básicos del cliente bancario</span>
+                    </div>
+                </div>
+
+                <form action="{{ url_for('guardar_cliente') }}" method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">DPI</label>
+                            <input type="text" class="form-control" name="dpi" required>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Nombres</label>
+                            <input type="text" class="form-control" name="nombres" required>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Apellidos</label>
+                            <input type="text" class="form-control" name="apellidos" required>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" class="form-control" name="telefono">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Correo</label>
+                            <input type="email" class="form-control" name="correo">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Dirección</label>
+                            <input type="text" class="form-control" name="direccion">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary mt-3">
+                        Guardar cliente
+                    </button>
+                </form>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-title">
+                    <div>
+                        <h4>Clientes registrados</h4>
+                        <span>Listado general de clientes creados</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>DPI</th>
+                                <th>Nombre completo</th>
+                                <th>Teléfono</th>
+                                <th>Correo</th>
+                                <th>Dirección</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for cliente in clientes %}
+                                <tr>
+                                    <td>{{ cliente.dpi }}</td>
+                                    <td>{{ cliente.nombres }} {{ cliente.apellidos }}</td>
+                                    <td>{{ cliente.telefono or 'N/A' }}</td>
+                                    <td>{{ cliente.correo or 'N/A' }}</td>
+                                    <td>{{ cliente.direccion or 'N/A' }}</td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            {{ cliente.estado }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        No hay clientes registrados.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- CUENTAS -->
+        <section id="cuentas" class="app-section">
+            <div class="panel-card mb-4">
+                <div class="panel-title">
+                    <div>
+                        <h4>Apertura de cuenta</h4>
+                        <span>Creación de cuenta bancaria asociada a un cliente</span>
+                    </div>
+                </div>
+
+                <form action="{{ url_for('guardar_cuenta') }}" method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Cliente</label>
+                            <select class="form-select" name="id_cliente" required>
+                                <option value="">Seleccione un cliente</option>
+                                {% for cliente in clientes %}
+                                    <option value="{{ cliente.id_cliente }}">
+                                        {{ cliente.nombres }} {{ cliente.apellidos }} - {{ cliente.dpi }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Tipo de cuenta</label>
+                            <select class="form-select" name="id_tipo_cuenta" required>
+                                <option value="">Seleccione tipo</option>
+                                {% for tipo in tipos_cuenta %}
+                                    <option value="{{ tipo.id_tipo_cuenta }}">
+                                        {{ tipo.nombre_tipo }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Saldo inicial</label>
+                            <input 
+                                type="number" 
+                                step="0.01" 
+                                min="0" 
+                                class="form-control" 
+                                name="saldo_inicial" 
+                                value="0"
+                            >
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary mt-3">
+                        Crear cuenta
+                    </button>
+                </form>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-title">
+                    <div>
+                        <h4>Cuentas registradas</h4>
+                        <span>Listado de cuentas bancarias activas o registradas</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Número de cuenta</th>
+                                <th>Cliente</th>
+                                <th>Tipo</th>
+                                <th>Saldo</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for cuenta in cuentas %}
+                                <tr>
+                                    <td>{{ cuenta.numero_cuenta }}</td>
+                                    <td>{{ cuenta.nombres }} {{ cuenta.apellidos }}</td>
+                                    <td>{{ cuenta.nombre_tipo }}</td>
+                                    <td>Q{{ "%.2f"|format(cuenta.saldo) }}</td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            {{ cuenta.estado }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        No hay cuentas registradas.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TRANSACCIONES -->
+        <section id="transacciones" class="app-section">
+            <div class="panel-card mb-4">
+                <div class="panel-title">
+                    <div>
+                        <h4>Procesar transacción</h4>
+                        <span>Depósitos, retiros y transferencias entre cuentas</span>
+                    </div>
+                </div>
+
+                <form action="{{ url_for('procesar_transaccion') }}" method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo de transacción</label>
+                            <select class="form-select" name="tipo_transaccion" required>
+                                <option value="">Seleccione</option>
+                                <option value="DEPOSITO">Depósito</option>
+                                <option value="RETIRO">Retiro</option>
+                                <option value="TRANSFERENCIA">Transferencia</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Cuenta origen</label>
+                            <select class="form-select" name="id_cuenta_origen">
+                                <option value="">No aplica</option>
+                                {% for cuenta in cuentas %}
+                                    <option value="{{ cuenta.id_cuenta }}">
+                                        {{ cuenta.numero_cuenta }} - {{ cuenta.nombres }} {{ cuenta.apellidos }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Cuenta destino</label>
+                            <select class="form-select" name="id_cuenta_destino">
+                                <option value="">No aplica</option>
+                                {% for cuenta in cuentas %}
+                                    <option value="{{ cuenta.id_cuenta }}">
+                                        {{ cuenta.numero_cuenta }} - {{ cuenta.nombres }} {{ cuenta.apellidos }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Monto</label>
+                            <input 
+                                type="number" 
+                                step="0.01" 
+                                min="0.01" 
+                                class="form-control" 
+                                name="monto" 
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary mt-3">
+                        Procesar transacción
+                    </button>
+                </form>
+            </div>
+
+            <div class="panel-card mb-4">
+                <div class="panel-title">
+                    <div>
+                        <h4>Anulación de transacción</h4>
+                        <span>Permite revertir una transacción completada y actualizar el saldo correspondiente</span>
+                    </div>
+                </div>
+
+                <form action="{{ url_for('anular_transaccion') }}" method="POST">
+                    <div class="row g-3">
+
+                        <div class="col-md-9">
+                            <label class="form-label">Transacción a anular</label>
+
+                            <select class="form-select" name="id_transaccion" required>
+                                <option value="">Seleccione una transacción completada</option>
+
+                                {% for transaccion in transacciones %}
+                                    {% if transaccion.estado == 'COMPLETADA' %}
+                                        <option value="{{ transaccion.id_transaccion }}">
+                                            {{ transaccion.codigo_transaccion }} -
+                                            {{ transaccion.tipo_transaccion }} -
+                                            Q{{ "%.2f"|format(transaccion.monto) }}
+                                        </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-danger w-100">
+                                Anular transacción
+                            </button>
+                        </div>
+
+                    </div>
+                </form>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-title">
+                    <div>
+                        <h4>Últimas transacciones</h4>
+                        <span>Historial reciente de movimientos registrados</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Tipo</th>
+                                <th>Origen</th>
+                                <th>Destino</th>
+                                <th>Monto</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for trx in transacciones %}
+                                <tr>
+                                    <td>{{ trx.codigo_transaccion }}</td>
+                                    <td>{{ trx.tipo_transaccion }}</td>
+                                    <td>{{ trx.id_cuenta_origen or 'N/A' }}</td>
+                                    <td>{{ trx.id_cuenta_destino or 'N/A' }}</td>
+                                    <td>Q{{ "%.2f"|format(trx.monto) }}</td>
+                                    <td>
+                                        {% if trx.estado == 'ANULADA' %}
+                                            <span class="badge bg-danger">
+                                                {{ trx.estado }}
+                                            </span>
+                                        {% elif trx.estado == 'PENDIENTE' %}
+                                            <span class="badge bg-warning text-dark">
+                                                {{ trx.estado }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-success">
+                                                {{ trx.estado }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ trx.fecha_transaccion }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        No hay transacciones registradas.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAGOS -->
+        <section id="pagos" class="app-section">
+            <div class="panel-card mb-4">
+                <div class="panel-title">
+                    <div>
+                        <h4>Pagos de servicio</h4>
+                        <span>Pago de servicios asociados a una cuenta bancaria</span>
+                    </div>
+                </div>
+
+                <form action="{{ url_for('procesar_pago') }}" method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Cuenta</label>
+                            <select class="form-select" name="id_cuenta" required>
+                                <option value="">Seleccione cuenta</option>
+                                {% for cuenta in cuentas %}
+                                    <option value="{{ cuenta.id_cuenta }}">
+                                        {{ cuenta.numero_cuenta }} - {{ cuenta.nombres }} {{ cuenta.apellidos }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Servicio</label>
+                            <select class="form-select" name="id_servicio" required>
+                                <option value="">Seleccione servicio</option>
+                                {% for servicio in servicios %}
+                                    <option value="{{ servicio.id_servicio }}">
+                                        {{ servicio.nombre_servicio }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Referencia</label>
+                            <input type="text" class="form-control" name="referencia" required>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Monto</label>
+                            <input 
+                                type="number" 
+                                step="0.01" 
+                                min="0.01" 
+                                class="form-control" 
+                                name="monto" 
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary mt-3">
+                        Registrar pago
+                    </button>
+                </form>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-title">
+                    <div>
+                        <h4>Pagos registrados</h4>
+                        <span>Historial reciente de pagos de servicios</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Cuenta</th>
+                                <th>Servicio</th>
+                                <th>Referencia</th>
+                                <th>Monto</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for pago in pagos %}
+                                <tr>
+                                    <td>{{ pago.codigo_pago }}</td>
+                                    <td>{{ pago.numero_cuenta }}</td>
+                                    <td>{{ pago.nombre_servicio }}</td>
+                                    <td>{{ pago.referencia }}</td>
+                                    <td>Q{{ "%.2f"|format(pago.monto) }}</td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            {{ pago.estado }}
+                                        </span>
+                                    </td>
+                                    <td>{{ pago.fecha_pago }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        No hay pagos registrados.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
