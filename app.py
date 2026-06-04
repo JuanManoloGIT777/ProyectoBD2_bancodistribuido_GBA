@@ -1821,3 +1821,102 @@ def procesar_pago():
 
     return redirect(url_for("panel_cajero", seccion="pagos"))   
 
+# =========================
+# PANEL AUDITOR
+# =========================
+
+@app.route("/panel_auditor")
+@rol_requerido("AUDITOR")
+def panel_auditor():
+    conexion = obtener_conexion()
+
+    eventos = []
+    transacciones = []
+    pagos = []
+
+    if conexion:
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                        a.fecha,
+                        COALESCE(u.usuario, 'Sistema BD') AS usuario,
+                        a.modulo,
+                        a.operacion,
+                        a.descripcion
+                    FROM auditoria a
+                    LEFT JOIN usuarios u ON a.id_usuario = u.id_usuario
+                    ORDER BY a.fecha DESC
+                    """
+                )
+                eventos = cursor.fetchall()
+
+                cursor.execute(
+                    """
+                    SELECT *
+                    FROM transacciones
+                    ORDER BY fecha_transaccion DESC
+                    """
+                )
+                transacciones = cursor.fetchall()
+
+                cursor.execute(
+                    """
+                    SELECT
+                        p.codigo_pago,
+                        c.numero_cuenta,
+                        s.nombre_servicio,
+                        p.referencia,
+                        p.monto,
+                        p.estado,
+                        p.fecha_pago
+                    FROM pagos p
+                    INNER JOIN cuentas c ON p.id_cuenta = c.id_cuenta
+                    INNER JOIN servicios s ON p.id_servicio = s.id_servicio
+                    ORDER BY p.fecha_pago DESC
+                    """
+                )
+                pagos = cursor.fetchall()
+
+        except Exception as error:
+            print("Error al cargar auditoría:", error)
+            flash("No se pudieron cargar los datos de auditoría.", "danger")
+
+        finally:
+            conexion.close()
+
+    return render_template(
+        "panel_auditor.html",
+        eventos=eventos,
+        transacciones=transacciones,
+        pagos=pagos
+    )
+
+
+# =========================
+# LOGOUT
+# =========================
+
+@app.route("/logout")
+@login_requerido
+def logout():
+    registrar_auditoria(
+        session["id_usuario"],
+        "Seguridad",
+        "LOGOUT",
+        f"El usuario {session['usuario']} cerró sesión."
+    )
+
+    session.clear()
+    flash("Sesión cerrada correctamente.", "success")
+    return redirect(url_for("pgba"))
+
+
+# =========================
+# EJECUCIÓN
+# =========================
+
+if __name__ == "__main__":
+    crear_usuarios_base()
+    app.run(debug=True)
