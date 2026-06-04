@@ -70,7 +70,6 @@
             {% endif %}
         {% endwith %}
 
-        <!-- PANEL PRINCIPAL -->
         <section id="panel" class="app-section active-section">
             <div class="row g-4 mb-4">
                 <div class="col-md-4">
@@ -132,7 +131,6 @@
             </div>
         </section>
 
-        <!-- AUDITORÍA -->
         <section id="auditoria" class="app-section">
             <div class="panel-card">
                 <div class="panel-title">
@@ -177,7 +175,6 @@
             </div>
         </section>
 
-        <!-- TRANSACCIONES -->
         <section id="transacciones" class="app-section">
             <div class="panel-card">
                 <div class="panel-title">
@@ -210,7 +207,7 @@
                                     <td>{{ trx.tipo_transaccion }}</td>
                                     <td>{{ trx.id_cuenta_origen or 'N/A' }}</td>
                                     <td>{{ trx.id_cuenta_destino or 'N/A' }}</td>
-                                    <td>Q{{ "%.2f"|format(trx.monto) }}</td>
+                                    <td>{{ trx.monto | moneda }}</td>
                                     <td>
                                         <span class="badge bg-success">{{ trx.estado }}</span>
                                     </td>
@@ -230,7 +227,6 @@
             </div>
         </section>
 
-        <!-- PAGOS -->
         <section id="pagos" class="app-section">
             <div class="panel-card">
                 <div class="panel-title">
@@ -262,7 +258,7 @@
                                     <td>{{ pago.numero_cuenta }}</td>
                                     <td>{{ pago.nombre_servicio }}</td>
                                     <td>{{ pago.referencia }}</td>
-                                    <td>Q{{ "%.2f"|format(pago.monto) }}</td>
+                                    <td>{{ pago.monto | moneda }}</td>
                                     <td>
                                         <span class="badge bg-success">{{ pago.estado }}</span>
                                     </td>

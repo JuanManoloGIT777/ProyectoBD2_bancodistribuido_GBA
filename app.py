@@ -1894,7 +1894,7 @@ def panel_auditor():
     )
 
 # =========================
-# FILTRO DE CIFRAS DECIMALES
+# FORMATO DE CIFRAS DECIMALES
 # =========================
 
 @app.template_filter("moneda")
