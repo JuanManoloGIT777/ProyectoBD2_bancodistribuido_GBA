@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>GBA CREDOMATIC | Panel Auditor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css') }}">
+</head>
+<body>
+
+<div class="app-layout">
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">GBA</div>
+            <div>
+                <h4>GBA CREDOMATIC</h4>
+                <span>Auditoría</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <button class="menu-link active" data-section="panel">Panel Auditor</button>
+            <button class="menu-link" data-section="auditoria">Auditoría</button>
+            <button class="menu-link" data-section="transacciones">Transacciones</button>
+            <button class="menu-link" data-section="pagos">Pagos</button>
+        </nav>
+
+        <div class="sidebar-status">
+            <span>Rol activo</span>
+            <strong>Auditor</strong>
+        </div>
+    </aside>
+
+    <main class="content">
+
+        <header class="top-header panel-header-clean auditor-header-clean">
+            <div class="panel-header-info">
+                <span class="panel-header-badge">Control y revisión</span>
+                <p class="section-label">Centro de Auditoría Interna</p>
+                <h1 id="tituloSeccion">Panel Auditor</h1>
+                <span id="subtituloSeccion">
+                    Consulta de eventos, transacciones, pagos y actividad registrada dentro del sistema.
+                </span>
+            </div>
+
+            <div class="panel-session-box">
+                <div class="panel-session-logo">GBA</div>
+
+                <div class="panel-session-info">
+                    <small>Sesión activa</small>
+                    <strong>{{ session.nombre_completo }}</strong>
+                </div>
+
+                <a href="{{ url_for('logout') }}" class="panel-logout-btn">
+                    Cerrar sesión
+                </a>
+            </div>
+        </header>
+
+        {% with mensajes = get_flashed_messages(with_categories=true) %}
+            {% if mensajes %}
+                {% for categoria, mensaje in mensajes %}
+                    <div class="alert alert-{{ categoria }}">
+                        {{ mensaje }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- PANEL PRINCIPAL -->
+        <section id="panel" class="app-section active-section">
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <span>Eventos de auditoría</span>
+                        <h2>{{ eventos|length }}</h2>
+                        <p>Registros del sistema.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="metric-card highlight">
+                        <span>Transacciones</span>
+                        <h2>{{ transacciones|length }}</h2>
+                        <p>Movimientos consultables.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <span>Pagos</span>
+                        <h2>{{ pagos|length }}</h2>
+                        <p>Pagos registrados.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-title">
+                    <div>
+                        <h4>Resumen de auditoría</h4>
+                        <span>Áreas disponibles para revisión y control</span>
+                    </div>
+                </div>
+
+                <div class="system-item">
+                    <div>
+                        <strong>Auditoría del sistema</strong>
+                        <p class="mb-0 text-muted">Consulta de acciones realizadas por usuarios internos.</p>
+                    </div>
+                    <span class="badge bg-primary">Consulta</span>
+                </div>
+
+                <div class="system-item">
+                    <div>
+                        <strong>Transacciones</strong>
+                        <p class="mb-0 text-muted">Revisión de movimientos bancarios registrados.</p>
+                    </div>
+                    <span class="badge bg-primary">Consulta</span>
+                </div>
+
+                <div class="system-item">
+                    <div>
+                        <strong>Pagos</strong>
+                        <p class="mb-0 text-muted">Consulta de pagos de servicios procesados.</p>
+                    </div>
+                    <span class="badge bg-primary">Consulta</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- AUDITORÍA -->
+        <section id="auditoria" class="app-section">
+            <div class="panel-card">
+                <div class="panel-title">
+                    <div>
+                        <h4>Auditoría del sistema</h4>
+                        <span>Eventos registrados dentro del sistema bancario</span>
+                    </div>
+
+                    <span class="badge bg-primary">Solo consulta</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Usuario</th>
+                                <th>Módulo</th>
+                                <th>Operación</th>
+                                <th>Descripción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for evento in eventos %}
+                                <tr>
+                                    <td>{{ evento.fecha }}</td>
+                                    <td>{{ evento.usuario }}</td>
+                                    <td>{{ evento.modulo }}</td>
+                                    <td>{{ evento.operacion }}</td>
+                                    <td>{{ evento.descripcion }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        No hay eventos registrados.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TRANSACCIONES -->
+        <section id="transacciones" class="app-section">
+            <div class="panel-card">
+                <div class="panel-title">
+                    <div>
+                        <h4>Transacciones registradas</h4>
+                        <span>Consulta de movimientos bancarios procesados</span>
+                    </div>
+
+                    <span class="badge bg-primary">Solo consulta</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Tipo</th>
+                                <th>Cuenta origen</th>
+                                <th>Cuenta destino</th>
+                                <th>Monto</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                                <th>Descripción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trx in transacciones %}
+                                <tr>
+                                    <td>{{ trx.codigo_transaccion }}</td>
+                                    <td>{{ trx.tipo_transaccion }}</td>
+                                    <td>{{ trx.id_cuenta_origen or 'N/A' }}</td>
+                                    <td>{{ trx.id_cuenta_destino or 'N/A' }}</td>
+                                    <td>Q{{ "%.2f"|format(trx.monto) }}</td>
+                                    <td>
+                                        <span class="badge bg-success">{{ trx.estado }}</span>
+                                    </td>
+                                    <td>{{ trx.fecha_transaccion }}</td>
+                                    <td>{{ trx.descripcion }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        No hay transacciones registradas.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAGOS -->
+        <section id="pagos" class="app-section">
+            <div class="panel-card">
+                <div class="panel-title">
+                    <div>
+                        <h4>Pagos registrados</h4>
+                        <span>Consulta de pagos de servicios realizados</span>
+                    </div>
+
+                    <span class="badge bg-primary">Solo consulta</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Cuenta</th>
+                                <th>Servicio</th>
+                                <th>Referencia</th>
+                                <th>Monto</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pago in pagos %}
+                                <tr>
+                                    <td>{{ pago.codigo_pago }}</td>
+                                    <td>{{ pago.numero_cuenta }}</td>
+                                    <td>{{ pago.nombre_servicio }}</td>
+                                    <td>{{ pago.referencia }}</td>
+                                    <td>Q{{ "%.2f"|format(pago.monto) }}</td>
+                                    <td>
+                                        <span class="badge bg-success">{{ pago.estado }}</span>
+                                    </td>
+                                    <td>{{ pago.fecha_pago }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        No hay pagos registrados.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
