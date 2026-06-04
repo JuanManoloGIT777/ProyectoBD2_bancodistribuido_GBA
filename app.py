@@ -1166,3 +1166,658 @@ def activar_cuenta_admin(id_cuenta):
 
     return redirect(url_for("panel_admin", seccion="cuentas"))
 
+ 
+# =========================
+# PANEL CAJERO
+# =========================
+
+@app.route("/panel_cajero")
+@rol_requerido("CAJERO")
+def panel_cajero():
+    conexion = obtener_conexion()
+
+    clientes = []
+    cuentas = []
+    tipos_cuenta = []
+    servicios = []
+    transacciones = []
+    pagos = []
+
+    total_clientes = 0
+    total_cuentas = 0
+    total_transacciones = 0
+    saldo_total = 0
+
+    if conexion:
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT *
+                    FROM clientes
+                    ORDER BY id_cliente DESC
+                    """
+                )
+                clientes = cursor.fetchall()
+
+                cursor.execute(
+                    """
+                    SELECT
+                        c.id_cuenta,
+                        c.numero_cuenta,
+                        c.saldo,
+                        c.estado,
+                        tc.nombre_tipo,
+                        cl.nombres,
+                        cl.apellidos
+                    FROM cuentas c
+                    INNER JOIN clientes cl ON c.id_cliente = cl.id_cliente
+                    INNER JOIN tipos_cuenta tc ON c.id_tipo_cuenta = tc.id_tipo_cuenta
+                    ORDER BY c.id_cuenta DESC
+                    """
+                )
+                cuentas = cursor.fetchall()
+
+                cursor.execute(
+                    """
+                    SELECT id_tipo_cuenta, nombre_tipo
+                    FROM tipos_cuenta
+                    WHERE estado = 'ACTIVO'
+                    ORDER BY nombre_tipo
+                    """
+                )
+                tipos_cuenta = cursor.fetchall()
+
+                cursor.execute(
+                    """
+                    SELECT id_servicio, nombre_servicio
+                    FROM servicios
+                    WHERE estado = 'ACTIVO'
+                    ORDER BY nombre_servicio
+                    """
+                )
+                servicios = cursor.fetchall()
+
+                cursor.execute(
+                    """
+                    SELECT *
+                    FROM transacciones
+                    ORDER BY fecha_transaccion DESC
+                    LIMIT 30
+                    """
+                )
+                transacciones = cursor.fetchall()
+
+                cursor.execute(
+                    """
+                    SELECT
+                        p.codigo_pago,
+                        c.numero_cuenta,
+                        s.nombre_servicio,
+                        p.referencia,
+                        p.monto,
+                        p.estado,
+                        p.fecha_pago
+                    FROM pagos p
+                    INNER JOIN cuentas c ON p.id_cuenta = c.id_cuenta
+                    INNER JOIN servicios s ON p.id_servicio = s.id_servicio
+                    ORDER BY p.fecha_pago DESC
+                    LIMIT 20
+                    """
+                )
+                pagos = cursor.fetchall()
+
+                cursor.execute("SELECT COUNT(*) AS total FROM clientes")
+                total_clientes = cursor.fetchone()["total"]
+
+                cursor.execute("SELECT COUNT(*) AS total FROM cuentas")
+                total_cuentas = cursor.fetchone()["total"]
+
+                cursor.execute("SELECT COUNT(*) AS total FROM transacciones")
+                total_transacciones = cursor.fetchone()["total"]
+
+                cursor.execute("SELECT COALESCE(SUM(saldo), 0) AS total FROM cuentas")
+                saldo_total = cursor.fetchone()["total"]
+
+        except Exception as error:
+            print("Error al cargar panel cajero:", error)
+            flash("No se pudieron cargar los datos del cajero.", "danger")
+
+        finally:
+            conexion.close()
+
+    return render_template(
+        "panel_cajero.html",
+        clientes=clientes,
+        cuentas=cuentas,
+        tipos_cuenta=tipos_cuenta,
+        servicios=servicios,
+        transacciones=transacciones,
+        pagos=pagos,
+        total_clientes=total_clientes,
+        total_cuentas=total_cuentas,
+        total_transacciones=total_transacciones,
+        saldo_total=saldo_total
+    )
+
+
+@app.route("/clientes/guardar", methods=["POST"])
+@rol_requerido("CAJERO")
+def guardar_cliente():
+    dpi = request.form.get("dpi", "").strip()
+    nombres = request.form.get("nombres", "").strip()
+    apellidos = request.form.get("apellidos", "").strip()
+    telefono = request.form.get("telefono", "").strip()
+    correo = request.form.get("correo", "").strip()
+    direccion = request.form.get("direccion", "").strip()
+
+    if not dpi or not nombres or not apellidos:
+        flash("DPI, nombres y apellidos son obligatorios.", "warning")
+        return redirect(url_for("panel_cajero", seccion="clientes"))
+
+    conexion = obtener_conexion()
+
+    if conexion is None:
+        flash("No se pudo conectar con la base de datos.", "danger")
+        return redirect(url_for("panel_cajero", seccion="clientes"))
+
+    establecer_contexto_auditoria(conexion)
+
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO clientes
+                (dpi, nombres, apellidos, telefono, correo, direccion, estado)
+                VALUES (%s, %s, %s, %s, %s, %s, 'ACTIVO')
+                """,
+                (dpi, nombres, apellidos, telefono, correo, direccion)
+            )
+
+        conexion.commit()
+        flash("Cliente registrado correctamente.", "success")
+
+    except Exception as error:
+        conexion.rollback()
+        print("Error al guardar cliente:", error)
+        flash("No se pudo registrar el cliente. Verifique que el DPI no esté repetido.", "danger")
+
+    finally:
+        conexion.close()
+
+    return redirect(url_for("panel_cajero", seccion="clientes"))
+
+
+@app.route("/cuentas/guardar", methods=["POST"])
+@rol_requerido("CAJERO")
+def guardar_cuenta():
+    id_cliente = request.form.get("id_cliente", "").strip()
+    id_tipo_cuenta = request.form.get("id_tipo_cuenta", "").strip()
+    saldo_inicial = request.form.get("saldo_inicial", "0").strip()
+
+    if not id_cliente or not id_tipo_cuenta:
+        flash("Debe seleccionar cliente y tipo de cuenta.", "warning")
+        return redirect(url_for("panel_cajero", seccion="cuentas"))
+
+    try:
+        saldo_inicial = float(saldo_inicial)
+
+        if saldo_inicial < 0:
+            flash("El saldo inicial no puede ser negativo.", "warning")
+            return redirect(url_for("panel_cajero", seccion="cuentas"))
+
+    except ValueError:
+        flash("El saldo inicial no es válido.", "warning")
+        return redirect(url_for("panel_cajero", seccion="cuentas"))
+
+    conexion = obtener_conexion()
+
+    if conexion is None:
+        flash("No se pudo conectar con la base de datos.", "danger")
+        return redirect(url_for("panel_cajero", seccion="cuentas"))
+
+    establecer_contexto_auditoria(conexion)
+
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute("SELECT COALESCE(MAX(id_cuenta), 0) + 1 AS siguiente FROM cuentas")
+            siguiente = cursor.fetchone()["siguiente"]
+            numero_cuenta = f"100001{str(siguiente).zfill(4)}"
+
+            cursor.execute(
+                """
+                INSERT INTO cuentas
+                (id_cliente, id_tipo_cuenta, numero_cuenta, saldo, estado)
+                VALUES (%s, %s, %s, %s, 'ACTIVA')
+                """,
+                (id_cliente, id_tipo_cuenta, numero_cuenta, saldo_inicial)
+            )
+
+        conexion.commit()
+        flash("Cuenta creada correctamente.", "success")
+
+    except Exception as error:
+        conexion.rollback()
+        print("Error al crear cuenta:", error)
+        flash("No se pudo crear la cuenta.", "danger")
+
+    finally:
+        conexion.close()
+
+    return redirect(url_for("panel_cajero", seccion="cuentas"))
+
+
+@app.route("/transacciones/procesar", methods=["POST"])
+@rol_requerido("CAJERO")
+def procesar_transaccion():
+    tipo = request.form.get("tipo_transaccion", "").strip()
+    id_cuenta_origen = request.form.get("id_cuenta_origen") or None
+    id_cuenta_destino = request.form.get("id_cuenta_destino") or None
+    monto = request.form.get("monto", "").strip()
+
+    try:
+        monto = float(monto)
+
+        if monto <= 0:
+            flash("El monto debe ser mayor que cero.", "warning")
+            return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+    except ValueError:
+        flash("El monto no es válido.", "warning")
+        return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+    codigo = "TRX-" + datetime.now().strftime("%Y%m%d%H%M%S%f")
+    conexion = obtener_conexion()
+
+    if conexion is None:
+        flash("No se pudo conectar con la base de datos.", "danger")
+        return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+    establecer_contexto_auditoria(conexion)
+
+    try:
+        with conexion.cursor() as cursor:
+            if tipo == "DEPOSITO":
+                if not id_cuenta_destino:
+                    flash("Para depósito debe seleccionar cuenta destino.", "warning")
+                    return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+                cursor.execute(
+                    """
+                    UPDATE cuentas
+                    SET saldo = saldo + %s
+                    WHERE id_cuenta = %s
+                    """,
+                    (monto, id_cuenta_destino)
+                )
+
+                cursor.execute(
+                    """
+                    INSERT INTO transacciones
+                    (codigo_transaccion, tipo_transaccion, id_cuenta_origen, id_cuenta_destino, monto, estado, descripcion)
+                    VALUES (%s, %s, NULL, %s, %s, 'COMPLETADA', %s)
+                    """,
+                    (codigo, tipo, id_cuenta_destino, monto, "Depósito realizado en ventanilla.")
+                )
+
+            elif tipo == "RETIRO":
+                if not id_cuenta_origen:
+                    flash("Para retiro debe seleccionar cuenta origen.", "warning")
+                    return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+                cursor.execute(
+                    """
+                    SELECT saldo
+                    FROM cuentas
+                    WHERE id_cuenta = %s
+                    FOR UPDATE
+                    """,
+                    (id_cuenta_origen,)
+                )
+
+                cuenta = cursor.fetchone()
+
+                if not cuenta or cuenta["saldo"] < monto:
+                    flash("Fondos insuficientes.", "danger")
+                    return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+                cursor.execute(
+                    """
+                    UPDATE cuentas
+                    SET saldo = saldo - %s
+                    WHERE id_cuenta = %s
+                    """,
+                    (monto, id_cuenta_origen)
+                )
+
+                cursor.execute(
+                    """
+                    INSERT INTO transacciones
+                    (codigo_transaccion, tipo_transaccion, id_cuenta_origen, id_cuenta_destino, monto, estado, descripcion)
+                    VALUES (%s, %s, %s, NULL, %s, 'COMPLETADA', %s)
+                    """,
+                    (codigo, tipo, id_cuenta_origen, monto, "Retiro realizado en ventanilla.")
+                )
+
+            elif tipo == "TRANSFERENCIA":
+                if not id_cuenta_origen or not id_cuenta_destino:
+                    flash("Debe seleccionar cuenta origen y destino.", "warning")
+                    return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+                if id_cuenta_origen == id_cuenta_destino:
+                    flash("La cuenta origen y destino no pueden ser la misma.", "warning")
+                    return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+                cursor.execute(
+                    """
+                    SELECT saldo
+                    FROM cuentas
+                    WHERE id_cuenta = %s
+                    FOR UPDATE
+                    """,
+                    (id_cuenta_origen,)
+                )
+
+                cuenta_origen = cursor.fetchone()
+
+                if not cuenta_origen or cuenta_origen["saldo"] < monto:
+                    flash("Fondos insuficientes.", "danger")
+                    return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+                cursor.execute(
+                    """
+                    UPDATE cuentas
+                    SET saldo = saldo - %s
+                    WHERE id_cuenta = %s
+                    """,
+                    (monto, id_cuenta_origen)
+                )
+
+                cursor.execute(
+                    """
+                    UPDATE cuentas
+                    SET saldo = saldo + %s
+                    WHERE id_cuenta = %s
+                    """,
+                    (monto, id_cuenta_destino)
+                )
+
+                cursor.execute(
+                    """
+                    INSERT INTO transacciones
+                    (codigo_transaccion, tipo_transaccion, id_cuenta_origen, id_cuenta_destino, monto, estado, descripcion)
+                    VALUES (%s, %s, %s, %s, %s, 'COMPLETADA', %s)
+                    """,
+                    (codigo, tipo, id_cuenta_origen, id_cuenta_destino, monto, "Transferencia realizada en ventanilla.")
+                )
+
+            else:
+                flash("Tipo de transacción no válido.", "danger")
+                return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+        conexion.commit()
+        flash("Transacción procesada correctamente.", "success")
+
+    except Exception as error:
+        conexion.rollback()
+        print("Error al procesar transacción:", error)
+        flash("No se pudo procesar la transacción.", "danger")
+
+    finally:
+        conexion.close()
+
+    return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+
+@app.route("/transacciones/anular", methods=["POST"])
+@rol_requerido("CAJERO")
+def anular_transaccion():
+    id_transaccion = request.form.get("id_transaccion", "").strip()
+
+    if not id_transaccion:
+        flash("Debe seleccionar una transacción para anular.", "warning")
+        return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+    conexion = obtener_conexion()
+
+    if conexion is None:
+        flash("No se pudo conectar con la base de datos.", "danger")
+        return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+    establecer_contexto_auditoria(conexion)
+
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    id_transaccion,
+                    codigo_transaccion,
+                    tipo_transaccion,
+                    id_cuenta_origen,
+                    id_cuenta_destino,
+                    monto,
+                    estado
+                FROM transacciones
+                WHERE id_transaccion = %s
+                FOR UPDATE
+                """,
+                (id_transaccion,)
+            )
+
+            transaccion = cursor.fetchone()
+
+            if not transaccion:
+                flash("La transacción seleccionada no existe.", "danger")
+                return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+            if transaccion["estado"] != "COMPLETADA":
+                flash("Solo se pueden anular transacciones completadas.", "warning")
+                return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+            tipo = transaccion["tipo_transaccion"]
+            monto = transaccion["monto"]
+            id_cuenta_origen = transaccion["id_cuenta_origen"]
+            id_cuenta_destino = transaccion["id_cuenta_destino"]
+
+            if tipo == "DEPOSITO":
+                cursor.execute(
+                    """
+                    SELECT saldo
+                    FROM cuentas
+                    WHERE id_cuenta = %s
+                    FOR UPDATE
+                    """,
+                    (id_cuenta_destino,)
+                )
+
+                cuenta_destino = cursor.fetchone()
+
+                if not cuenta_destino or cuenta_destino["saldo"] < monto:
+                    flash("No se puede anular el depósito porque la cuenta no tiene saldo suficiente para revertirlo.", "danger")
+                    return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+                cursor.execute(
+                    """
+                    UPDATE cuentas
+                    SET saldo = saldo - %s
+                    WHERE id_cuenta = %s
+                    """,
+                    (monto, id_cuenta_destino)
+                )
+
+            elif tipo == "RETIRO":
+                cursor.execute(
+                    """
+                    UPDATE cuentas
+                    SET saldo = saldo + %s
+                    WHERE id_cuenta = %s
+                    """,
+                    (monto, id_cuenta_origen)
+                )
+
+            elif tipo == "TRANSFERENCIA":
+                cursor.execute(
+                    """
+                    SELECT saldo
+                    FROM cuentas
+                    WHERE id_cuenta = %s
+                    FOR UPDATE
+                    """,
+                    (id_cuenta_destino,)
+                )
+
+                cuenta_destino = cursor.fetchone()
+
+                if not cuenta_destino or cuenta_destino["saldo"] < monto:
+                    flash("No se puede anular la transferencia porque la cuenta destino no tiene saldo suficiente.", "danger")
+                    return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+                cursor.execute(
+                    """
+                    UPDATE cuentas
+                    SET saldo = saldo - %s
+                    WHERE id_cuenta = %s
+                    """,
+                    (monto, id_cuenta_destino)
+                )
+
+                cursor.execute(
+                    """
+                    UPDATE cuentas
+                    SET saldo = saldo + %s
+                    WHERE id_cuenta = %s
+                    """,
+                    (monto, id_cuenta_origen)
+                )
+
+            elif tipo == "PAGO_SERVICIO":
+                cursor.execute(
+                    """
+                    UPDATE cuentas
+                    SET saldo = saldo + %s
+                    WHERE id_cuenta = %s
+                    """,
+                    (monto, id_cuenta_origen)
+                )
+
+            else:
+                flash("Este tipo de transacción no se puede anular desde este módulo.", "warning")
+                return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+            cursor.execute(
+                """
+                UPDATE transacciones
+                SET estado = 'ANULADA',
+                    descripcion = CONCAT(descripcion, ' | Transacción anulada y revertida.')
+                WHERE id_transaccion = %s
+                """,
+                (id_transaccion,)
+            )
+
+        conexion.commit()
+        flash("Transacción anulada y revertida correctamente.", "success")
+
+    except Exception as error:
+        conexion.rollback()
+        print("Error al anular transacción:", error)
+        flash("No se pudo anular la transacción.", "danger")
+
+    finally:
+        conexion.close()
+
+    return redirect(url_for("panel_cajero", seccion="transacciones"))
+
+
+@app.route("/pagos/procesar", methods=["POST"])
+@rol_requerido("CAJERO")
+def procesar_pago():
+    id_cuenta = request.form.get("id_cuenta", "").strip()
+    id_servicio = request.form.get("id_servicio", "").strip()
+    referencia = request.form.get("referencia", "").strip()
+    monto = request.form.get("monto", "").strip()
+
+    if not id_cuenta or not id_servicio or not referencia or not monto:
+        flash("Debe completar todos los campos del pago.", "warning")
+        return redirect(url_for("panel_cajero", seccion="pagos"))
+
+    try:
+        monto = float(monto)
+
+        if monto <= 0:
+            flash("El monto debe ser mayor que cero.", "warning")
+            return redirect(url_for("panel_cajero", seccion="pagos"))
+
+    except ValueError:
+        flash("El monto no es válido.", "warning")
+        return redirect(url_for("panel_cajero", seccion="pagos"))
+
+    codigo_pago = "PAG-" + datetime.now().strftime("%Y%m%d%H%M%S%f")
+    codigo_trx = "TRX-" + datetime.now().strftime("%Y%m%d%H%M%S%f")
+
+    conexion = obtener_conexion()
+
+    if conexion is None:
+        flash("No se pudo conectar con la base de datos.", "danger")
+        return redirect(url_for("panel_cajero", seccion="pagos"))
+
+    establecer_contexto_auditoria(conexion)
+
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT saldo
+                FROM cuentas
+                WHERE id_cuenta = %s
+                FOR UPDATE
+                """,
+                (id_cuenta,)
+            )
+
+            cuenta = cursor.fetchone()
+
+            if not cuenta or cuenta["saldo"] < monto:
+                flash("Fondos insuficientes.", "danger")
+                return redirect(url_for("panel_cajero", seccion="pagos"))
+
+            cursor.execute(
+                """
+                UPDATE cuentas
+                SET saldo = saldo - %s
+                WHERE id_cuenta = %s
+                """,
+                (monto, id_cuenta)
+            )
+
+            cursor.execute(
+                """
+                INSERT INTO pagos
+                (codigo_pago, id_cuenta, id_servicio, referencia, monto, estado)
+                VALUES (%s, %s, %s, %s, %s, 'PAGADO')
+                """,
+                (codigo_pago, id_cuenta, id_servicio, referencia, monto)
+            )
+
+            cursor.execute(
+                """
+                INSERT INTO transacciones
+                (codigo_transaccion, tipo_transaccion, id_cuenta_origen, id_cuenta_destino, monto, estado, descripcion)
+                VALUES (%s, 'PAGO_SERVICIO', %s, NULL, %s, 'COMPLETADA', %s)
+                """,
+                (codigo_trx, id_cuenta, monto, f"Pago de servicio con referencia {referencia}.")
+            )
+
+        conexion.commit()
+        flash("Pago registrado correctamente.", "success")
+
+    except Exception as error:
+        conexion.rollback()
+        print("Error al procesar pago:", error)
+        flash("No se pudo procesar el pago.", "danger")
+
+    finally:
+        conexion.close()
+
+    return redirect(url_for("panel_cajero", seccion="pagos"))   
+
