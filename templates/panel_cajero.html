@@ -71,7 +71,6 @@
             {% endif %}
         {% endwith %}
 
-        <!-- PANEL PRINCIPAL -->
         <section id="panel" class="app-section active-section">
 
             <div class="row g-4 mb-4">
@@ -102,7 +101,7 @@
                 <div class="col-md-3">
                     <div class="metric-card">
                         <span>Saldo total</span>
-                        <h2>Q{{ "%.2f"|format(saldo_total) }}</h2>
+                        <h2>{{ saldo_total | moneda }}</h2>
                         <p>Saldo acumulado.</p>
                     </div>
                 </div>
@@ -193,7 +192,7 @@
                                     </div>
 
                                     <div class="recent-activity-amount">
-                                        <strong>Q{{ "%.2f"|format(trx.monto) }}</strong>
+                                        <strong>{{ trx.monto | moneda }}</strong>
                                         <span>{{ trx.estado }}</span>
                                     </div>
                                 </div>
@@ -231,7 +230,7 @@
 
                                     <div class="mini-table-right">
                                         <span>{{ cuenta.nombre_tipo }}</span>
-                                        <strong>Q{{ "%.2f"|format(cuenta.saldo) }}</strong>
+                                        <strong>{{ cuenta.saldo | moneda }}</strong>
                                     </div>
                                 </div>
                             {% else %}
@@ -264,7 +263,7 @@
 
                                     <div class="mini-table-right">
                                         <span>{{ pago.estado }}</span>
-                                        <strong>Q{{ "%.2f"|format(pago.monto) }}</strong>
+                                        <strong>{{ pago.monto | moneda }}</strong>
                                     </div>
                                 </div>
                             {% else %}
@@ -280,7 +279,6 @@
 
         </section>
 
-        <!-- CLIENTES -->
         <section id="clientes" class="app-section">
             <div class="panel-card mb-4">
                 <div class="panel-title">
@@ -377,7 +375,6 @@
             </div>
         </section>
 
-        <!-- CUENTAS -->
         <section id="cuentas" class="app-section">
             <div class="panel-card mb-4">
                 <div class="panel-title">
@@ -458,7 +455,7 @@
                                     <td>{{ cuenta.numero_cuenta }}</td>
                                     <td>{{ cuenta.nombres }} {{ cuenta.apellidos }}</td>
                                     <td>{{ cuenta.nombre_tipo }}</td>
-                                    <td>Q{{ "%.2f"|format(cuenta.saldo) }}</td>
+                                    <td>{{ cuenta.saldo | moneda }}</td>
                                     <td>
                                         <span class="badge bg-success">
                                             {{ cuenta.estado }}
@@ -478,7 +475,6 @@
             </div>
         </section>
 
-        <!-- TRANSACCIONES -->
         <section id="transacciones" class="app-section">
             <div class="panel-card mb-4">
                 <div class="panel-title">
@@ -565,7 +561,7 @@
                                         <option value="{{ transaccion.id_transaccion }}">
                                             {{ transaccion.codigo_transaccion }} -
                                             {{ transaccion.tipo_transaccion }} -
-                                            Q{{ "%.2f"|format(transaccion.monto) }}
+                                            {{ transaccion.monto | moneda }}
                                         </option>
                                     {% endif %}
                                 {% endfor %}
@@ -611,7 +607,7 @@
                                     <td>{{ trx.tipo_transaccion }}</td>
                                     <td>{{ trx.id_cuenta_origen or 'N/A' }}</td>
                                     <td>{{ trx.id_cuenta_destino or 'N/A' }}</td>
-                                    <td>Q{{ "%.2f"|format(trx.monto) }}</td>
+                                    <td>{{ trx.monto | moneda }}</td>
                                     <td>
                                         {% if trx.estado == 'ANULADA' %}
                                             <span class="badge bg-danger">
@@ -642,7 +638,6 @@
             </div>
         </section>
 
-        <!-- PAGOS -->
         <section id="pagos" class="app-section">
             <div class="panel-card mb-4">
                 <div class="panel-title">
@@ -731,7 +726,7 @@
                                     <td>{{ pago.numero_cuenta }}</td>
                                     <td>{{ pago.nombre_servicio }}</td>
                                     <td>{{ pago.referencia }}</td>
-                                    <td>Q{{ "%.2f"|format(pago.monto) }}</td>
+                                    <td>{{ pago.monto | moneda }}</td>
                                     <td>
                                         <span class="badge bg-success">
                                             {{ pago.estado }}

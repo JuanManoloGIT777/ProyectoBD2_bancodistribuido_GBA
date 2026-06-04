@@ -1893,6 +1893,21 @@ def panel_auditor():
         pagos=pagos
     )
 
+# =========================
+# FILTRO DE CIFRAS DECIMALES
+# =========================
+
+@app.template_filter("moneda")
+def formato_moneda(valor):
+    try:
+        if valor is None:
+            valor = 0
+
+        return "Q{:,.2f}".format(float(valor))
+
+    except (ValueError, TypeError):
+        return "Q0.00"
+
 
 # =========================
 # LOGOUT

@@ -72,7 +72,6 @@
             {% endif %}
         {% endwith %}
 
-        <!-- PANEL ADMINISTRATIVO -->
         <section id="panel" class="app-section active-section">
 
             <div class="row g-4 mb-4">
@@ -109,7 +108,6 @@
                 </div>
             </div>
 
-            <!-- GRÁFICAS ADMINISTRATIVAS -->
             <div class="row g-4 mb-4">
                 <div class="col-lg-6">
                     <div class="panel-card admin-graph-card">
@@ -192,12 +190,12 @@
 
                         <div class="summary-line">
                             <span>Saldo total en cuentas</span>
-                            <strong>Q{{ "%.2f"|format(saldo_total) }}</strong>
+                            <strong>{{ saldo_total | moneda }}</strong>
                         </div>
 
                         <div class="summary-line">
                             <span>Monto total transaccionado</span>
-                            <strong>Q{{ "%.2f"|format(monto_total_transacciones) }}</strong>
+                            <strong>{{ monto_total_transacciones | moneda }}</strong>
                         </div>
 
                         <div class="summary-line">
@@ -215,7 +213,6 @@
 
         </section>
 
-        <!-- USUARIOS -->
         <section id="usuarios" class="app-section">
 
             <div class="panel-card mb-4">
@@ -410,7 +407,6 @@
 
         </section>
 
-        <!-- CLIENTES -->
         <section id="clientes" class="app-section">
             <div class="panel-card">
                 <div class="panel-title">
@@ -522,7 +518,6 @@
             </div>
         </section>
 
-        <!-- CUENTAS -->
         <section id="cuentas" class="app-section">
             <div class="panel-card">
                 <div class="panel-title">
@@ -565,7 +560,7 @@
                                     <td>{{ cuenta.nombres }} {{ cuenta.apellidos }}</td>
                                     <td>{{ cuenta.dpi }}</td>
                                     <td>{{ cuenta.nombre_tipo }}</td>
-                                    <td>Q{{ "%.2f"|format(cuenta.saldo) }}</td>
+                                    <td>{{ cuenta.saldo | moneda }}</td>
                                     <td>
                                         {% if cuenta.estado in ['ACTIVA', 'ACTIVO'] %}
                                             <span class="badge bg-success">
@@ -636,7 +631,6 @@
             </div>
         </section>
 
-        <!-- REPORTES -->
         <section id="reportes" class="app-section">
             <div class="panel-card">
                 <div class="panel-title">
@@ -656,7 +650,7 @@
 
                     <div>
                         <span>Monto total</span>
-                        <strong>Q{{ "%.2f"|format(monto_total_transacciones) }}</strong>
+                        <strong>{{ monto_total_transacciones | moneda }}</strong>
                     </div>
 
                     <div>
@@ -687,7 +681,7 @@
                                     <td>{{ trx.tipo_transaccion }}</td>
                                     <td>{{ trx.id_cuenta_origen or 'N/A' }}</td>
                                     <td>{{ trx.id_cuenta_destino or 'N/A' }}</td>
-                                    <td>Q{{ "%.2f"|format(trx.monto) }}</td>
+                                    <td>{{ trx.monto | moneda }}</td>
                                     <td>
                                         {% if trx.estado == 'ANULADA' %}
                                             <span class="badge bg-danger">
@@ -719,7 +713,6 @@
             </div>
         </section>
 
-        <!-- AUDITORÍA -->
         <section id="auditoria" class="app-section">
             <div class="panel-card">
                 <div class="panel-title">
